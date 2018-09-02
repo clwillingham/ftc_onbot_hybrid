@@ -35,10 +35,6 @@ http {
     }
 }
 
-//http {
-//    library = 'okhttp'
-//}
-
 task downloadZipFile(type: Download) {
     src 'http://192.168.1.8:8080/java/file/download?f=/src/'
     dest new File(buildDir, 'code.zip')
@@ -60,9 +56,9 @@ task compress(type: Zip) {
 
 task wipe(type: HttpTask) {
     def files = ['/src/org']
-    config {
-        request.uri = 'http://192.168.1.8:8080'
-    }
+//    config {
+//        request.uri = 'http://192.168.1.8:8080'
+//    }
     post {
         request.uri.path = '/java/file/delete'
         request.contentType = 'application/x-www-form-urlencoded'
@@ -76,9 +72,9 @@ task wipe(type: HttpTask) {
 task factory_reset(type: HttpTask) {
     def newPath = '';
     def id;
-    config {
-        request.uri = 'http://192.168.1.8:8080'
-    }
+//    config {
+//        request.uri = 'http://192.168.1.8:8080'
+//    }
     get {
         request.uri.path = '/java/admin/factory_reset'
         request.contentType = 'text/plain'
@@ -101,9 +97,9 @@ task factory_reset(type: HttpTask) {
 }
 
 task remoteBuild(type: HttpTask) {
-    config {
-        request.uri = 'http://192.168.1.8:8080'
-    }
+//    config {
+//        request.uri = 'http://192.168.1.8:8080'
+//    }
     get {
         request.uri.path = '/java/build/start'
     }
@@ -120,28 +116,7 @@ task remoteBuild(type: HttpTask) {
         }
     }
 }
-
-//task bla(type: HttpTask) {
-//    def paths;
-//    get {
-//        request.uri.path = '/java/file/tree'
-//        response.success { res, body ->
-//            paths = body.src
-//
-//        }
-//    }
-//    println(paths);
-////    fileTree('TeamCode/src/main/java/').matching { include "**/*.java" }.each { file ->
-////        def relativePath = file.path.minus(rootDir.path+'/TeamCode/src/main/java')
-////    }
-//}
-
 task push(type: HttpTask) {
-
-//    println(compress.archivePath)
-//    config {
-//        request.uri = 'http://192.168.1.8:8080'
-//    }
     def paths;
     get {
         request.uri.path = '/java/file/tree'
