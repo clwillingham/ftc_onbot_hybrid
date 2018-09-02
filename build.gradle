@@ -1,0 +1,262 @@
+/**
+ * Top-level build file for ftc_app project.
+ *
+ * It is extraordinarily rare that you will ever need to edit this file.
+ */
+buildscript {
+    repositories {
+        jcenter()
+        google()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.4'
+        classpath 'de.undercouch:gradle-download-task:3.4.3'
+        classpath "gradle.plugin.io.github.http-builder-ng:http-plugin:0.1.1"
+    }
+}
+apply plugin: 'de.undercouch.download'
+apply plugin: "io.github.http-builder-ng.http-plugin"
+import io.github.httpbuilderng.http.HttpTask
+
+import javax.swing.JFileChooser
+
+import static groovyx.net.http.MultipartContent.multipart
+import groovyx.net.http.OkHttpBuilder
+import groovyx.net.http.*
+import groovyx.net.http.ApacheEncoders
+import groovy.swing.SwingBuilder
+
+http {
+    config {
+        request.uri = 'http://192.168.1.8:8080'
+    }
+}
+
+//http {
+//    library = 'okhttp'
+//}
+
+task downloadZipFile(type: Download) {
+    src 'http://192.168.1.8:8080/java/file/download?f=/src/'
+    dest new File(buildDir, 'code.zip')
+}
+
+task pull(dependsOn: downloadZipFile, type: Copy) {
+    from zipTree(downloadZipFile.dest)
+    into 'TeamCode/src/main/java'
+}
+
+task compress(type: Zip) {
+    from new File('TeamCode/src/main/java/')
+//    include '*'
+//    include '*/*' //to include contents of a folder present inside Reports directory
+    archiveName 'out.zip'
+    destinationDir buildDir
+    println archivePath
+}
+
+task wipe(type: HttpTask) {
+    def files = ['/src/org']
+    config {
+        request.uri = 'http://192.168.1.8:8080'
+    }
+    post {
+        request.uri.path = '/java/file/delete'
+        request.contentType = 'application/x-www-form-urlencoded'
+        request.body = [delete: '["/src/"]']
+        response.success { data, body ->
+            println(body)
+        }
+    }
+}
+
+task factory_reset(type: HttpTask) {
+    def newPath = '';
+    def id;
+    config {
+        request.uri = 'http://192.168.1.8:8080'
+    }
+    get {
+        request.uri.path = '/java/admin/factory_reset'
+        request.contentType = 'text/plain'
+        response.success { req, body ->
+            println(body)
+            id = body
+//            newPath = '/java/admin/factory_reset?id='
+
+        }
+    }
+    get {
+        println('new path: ' + newPath);
+        request.uri.path = '/java/admin/factory_reset'
+        request.uri.query = [id: id]
+        response.success { req, body ->
+            println('Success')
+        }
+
+    }
+}
+
+task remoteBuild(type: HttpTask) {
+    config {
+        request.uri = 'http://192.168.1.8:8080'
+    }
+    get {
+        request.uri.path = '/java/build/start'
+    }
+    get {
+        request.uri.path = '/java/build/wait'
+        response.success {
+            println('Build Succeeded!')
+        }
+    }
+    get {
+        request.uri.path = '/java/build/status'
+        response.success { data, body ->
+            println(body)
+        }
+    }
+}
+
+//task bla(type: HttpTask) {
+//    def paths;
+//    get {
+//        request.uri.path = '/java/file/tree'
+//        response.success { res, body ->
+//            paths = body.src
+//
+//        }
+//    }
+//    println(paths);
+////    fileTree('TeamCode/src/main/java/').matching { include "**/*.java" }.each { file ->
+////        def relativePath = file.path.minus(rootDir.path+'/TeamCode/src/main/java')
+////    }
+//}
+
+task push(type: HttpTask) {
+
+//    println(compress.archivePath)
+//    config {
+//        request.uri = 'http://192.168.1.8:8080'
+//    }
+    def paths;
+    get {
+        request.uri.path = '/java/file/tree'
+        response.success { res, body ->
+            paths = body.src
+        }
+    }
+    println(paths)
+    fileTree('TeamCode/src/main/java/').matching { include "**/*.java" }.each { file ->
+//        println('Root:'+ rootDir+'/TeamCode/src/main/java/')
+//        rootProject.getRootProject().rootDir
+//        println(file-(rootDir+'/TeamCode/src/main/java/'))
+        post {
+            request.uri.path = '/java/file/upload'
+            request.contentType = 'multipart/form-data'
+//            request.body =[data: file.text]
+            request.body = multipart {
+                part 'file', file.name, 'application/octet-stream', file
+            }
+            request.encoder 'multipart/form-data', ApacheEncoders.&multipart
+            response.success { res, body ->
+                println('success')
+                println body
+            }
+            response.failure { err, body ->
+                println(body)
+            }
+            response.exception { e ->
+                println(e)
+            }
+        }
+    }
+
+}
+
+task newFile(type: HttpTask) {
+    def filePath = null
+    def file = null
+    def setupHardware = false
+    def template;
+    def dlg
+    get {
+        request.uri.path = '/java/file/templates'
+        response.success { arg1, body ->
+            println(body)
+            new SwingBuilder().edt {
+                dlg = dialog(modal: true, // Otherwise the build will continue running before you closed the dialog
+                        title: 'Options', // Dialog title
+                        alwaysOnTop: true, // pretty much what the name says
+                        resizable: false, // Don't allow the user to resize the dialog
+                        locationRelativeTo: null, // Place dialog in center of the screen
+                        pack: true, // We need to pack the dialog (so it will take the size of it's children
+                        show: true // Let's show it
+                ) {
+                    vbox { // Put everything below each other
+                        templateLabel = label('Choose a template: ')
+                        templateList = comboBox(items: body)
+                        hardwareChk = checkBox('Setup Code for Configured Hardware')
+                        fileHandler = fileChooser(
+                                dialogTitle: 'Choose file',
+                                currentDirectory: new File(rootDir, '/TeamCode/src/main/java/org/firstinspires/ftc/teamcode'),
+                                dialogType: JFileChooser.SAVE_DIALOG,
+                                actionPerformed: { action ->
+                                    println(action.actionCommand)
+                                    if (action.actionCommand == 'ApproveSelection') {
+                                        println('FilePath: ' + fileHandler.selectedFile)
+                                        file = fileHandler.selectedFile
+                                        filePath = '/src/' + fileHandler.selectedFile.path.minus(rootDir.path + '/TeamCode/src/main/java/')
+                                        setupHardware = hardwareChk.selected
+                                        template = 'templates/'+templateList.selectedItem
+                                    }
+                                    dispose()
+                                }
+                        )
+                    }
+                }
+
+            }
+        }
+    }
+
+    post {
+        assert filePath != null
+        println('FINISHED: ' + filePath)
+        println(setupHardware)
+        request.uri.path = '/java/file/new'
+        request.uri.query = [
+                f: filePath
+        ]
+        request.contentType = 'application/x-www-form-urlencoded'
+        request.body = [
+                new              : '1',
+                opModeAnnotations: '@TeleOp',
+                template         : template,
+                rcSetupHardware  : setupHardware ? 1 : 0,
+                teamName         : ''
+        ]
+        response.success { arg1, body ->
+            println('Success: ' + body)
+        }
+    }
+    get {
+        request.uri.path = '/java/file/get'
+        request.uri.query = [f: filePath]
+        response.success { arg1, body ->
+            println(body)
+            file.text = body
+        }
+    }
+}
+
+task wipeAndPush(type: GradleBuild) {
+    tasks = ['wipe', 'push']
+}
+
+task everything(type: GradleBuild) {
+    tasks = ['wipe', 'push', 'remoteBuild']
+}
