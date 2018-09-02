@@ -28,7 +28,7 @@ import groovyx.net.http.OkHttpBuilder
 import groovyx.net.http.*
 import groovyx.net.http.ApacheEncoders
 import groovy.swing.SwingBuilder
-
+System.setProperty('java.awt.headless', 'false')
 http {
     config {
         request.uri = 'http://192.168.1.8:8080'
@@ -160,10 +160,13 @@ task newFile(type: HttpTask) {
     def dlg
     get {
         request.uri.path = '/java/file/templates'
+        if (System.console() == null)
+            System.setProperty('java.awt.headless', 'false')
         response.success { arg1, body ->
             println(body)
+
             new SwingBuilder().edt {
-                dlg = dialog(modal: true, // Otherwise the build will continue running before you closed the dialog
+                dialog(modal: true, // Otherwise the build will continue running before you closed the dialog
                         title: 'Options', // Dialog title
                         alwaysOnTop: true, // pretty much what the name says
                         resizable: false, // Don't allow the user to resize the dialog
