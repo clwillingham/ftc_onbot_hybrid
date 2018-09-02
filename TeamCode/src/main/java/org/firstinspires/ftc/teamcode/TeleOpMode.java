@@ -42,8 +42,6 @@ import java.util.Date;
 @TeleOp
 public class TeleOpMode extends OpMode {
     /* Declare OpMode members. */
-
-
     @Override
     public void init() {
         telemetry.addData("Status", "Initialized");

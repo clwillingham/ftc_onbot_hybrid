@@ -22,6 +22,7 @@ apply plugin: "io.github.http-builder-ng.http-plugin"
 import io.github.httpbuilderng.http.HttpTask
 
 import javax.swing.JFileChooser
+import javax.swing.filechooser.FileFilter
 
 import static groovyx.net.http.MultipartContent.multipart
 import groovyx.net.http.OkHttpBuilder
@@ -182,12 +183,18 @@ task newFile(type: HttpTask) {
                                 dialogTitle: 'Choose file',
                                 currentDirectory: new File(rootDir, '/TeamCode/src/main/java/org/firstinspires/ftc/teamcode'),
                                 dialogType: JFileChooser.SAVE_DIALOG,
+                                fileFilter: [getDescription: {-> "*.java"}, accept:{f -> f.toString() ==~ /.*?\.java/  || f.isDirectory() }] as FileFilter,
                                 actionPerformed: { action ->
                                     println(action.actionCommand)
                                     if (action.actionCommand == 'ApproveSelection') {
                                         println('FilePath: ' + fileHandler.selectedFile)
                                         file = fileHandler.selectedFile
-                                        filePath = '/src/' + fileHandler.selectedFile.path.minus(rootDir.path + '/TeamCode/src/main/java/')
+                                        println(file.name.endsWith('.java'))
+                                        if(!file.name.endsWith('.java')){
+                                            file = new File(file.path+'.java');
+                                            println('New Name: ' + file)
+                                        }
+                                        filePath = '/src/' + file.path.minus(rootDir.path + '/TeamCode/src/main/java/')
                                         setupHardware = hardwareChk.selected
                                         template = 'templates/'+templateList.selectedItem
                                     }
@@ -202,7 +209,7 @@ task newFile(type: HttpTask) {
     }
 
     post {
-        assert filePath != null
+        assert filePath != null // Crash the task if the filePath is null, meaning the user didn't select anything, or canceled the dialog
         println('FINISHED: ' + filePath)
         println(setupHardware)
         request.uri.path = '/java/file/new'
