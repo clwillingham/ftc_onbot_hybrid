@@ -30,14 +30,15 @@ import groovyx.net.http.*
 import groovyx.net.http.ApacheEncoders
 import groovy.swing.SwingBuilder
 System.setProperty('java.awt.headless', 'false')
+def APP_URI = 'http://192.168.49.1:8080' //TODO: Change this URL to match the address specified in the Robot Controller or Driverstation App
 http {
     config {
-        request.uri = 'http://192.168.1.8:8080'
+        request.uri = APP_URI
     }
 }
 
 task downloadZipFile(type: Download) {
-    src 'http://192.168.1.8:8080/java/file/download?f=/src/'
+    src APP_URI+"/java/file/download?f=/src/"
     dest new File(buildDir, 'code.zip')
 }
 
@@ -106,8 +107,8 @@ task remoteBuild(type: HttpTask) {
     }
     get {
         request.uri.path = '/java/build/wait'
-        response.success {
-            println('Build Succeeded!')
+        response.success { arg, body ->
+            logger.error(body)
         }
     }
     get {
