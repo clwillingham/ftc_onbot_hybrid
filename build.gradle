@@ -38,13 +38,13 @@ http {
 }
 
 task downloadZipFile(type: Download) {
-    src APP_URI+"/java/file/download?f=/src/"
+    src APP_URI+"/java/file/download?f=/src/org/"
     dest new File(buildDir, 'code.zip')
 }
 
 task pull(dependsOn: downloadZipFile, type: Copy) {
     from zipTree(downloadZipFile.dest)
-    into 'TeamCode/src/main/java'
+    into 'TeamCode/src/main/java/org'
 }
 
 task compress(type: Zip) {
