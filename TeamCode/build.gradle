@@ -12,4 +12,7 @@
 // Custom definitions may go here
 
 // Include common definitions from above.
+import io.github.httpbuilderng.http.HttpTask
+
 apply from: '../build.common.gradle'
+//apply from: '../onbot.gradle'

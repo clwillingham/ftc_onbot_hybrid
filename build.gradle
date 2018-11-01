@@ -5,32 +5,43 @@
  */
 buildscript {
     repositories {
-        jcenter()
         google()
+        jcenter()
         maven {
             url "https://plugins.gradle.org/m2/"
         }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.4'
+        classpath 'com.android.tools.build:gradle:3.2.1'
         classpath 'de.undercouch:gradle-download-task:3.4.3'
         classpath "gradle.plugin.io.github.http-builder-ng:http-plugin:0.1.1"
     }
 }
+
+// This is now required because aapt2 has to be downloaded from the
+// google() repository beginning with version 3.2 of the Android Gradle Plugin
+allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
 apply plugin: 'de.undercouch.download'
 apply plugin: "io.github.http-builder-ng.http-plugin"
+//import io.github.httpbuilderng.http.HttpTask
 import io.github.httpbuilderng.http.HttpTask
-
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileFilter
 
-import static groovyx.net.http.MultipartContent.multipart
-import groovyx.net.http.OkHttpBuilder
-import groovyx.net.http.*
-import groovyx.net.http.ApacheEncoders
+//import static groovyx.net.http.MultipartContent.multipart
+//import groovyx.net.http.OkHttpBuilder
+//import groovyx.net.http.*
+//import groovyx.net.http.ApacheEncoders
 import groovy.swing.SwingBuilder
 System.setProperty('java.awt.headless', 'false')
 def APP_URI = 'http://192.168.49.1:8080' //TODO: Change this URL to match the address specified in the Robot Controller or Driverstation App
+
 http {
     config {
         request.uri = APP_URI
@@ -246,3 +257,4 @@ task wipeAndPush(type: GradleBuild) {
 task everything(type: GradleBuild) {
     tasks = ['wipe', 'push', 'remoteBuild']
 }
+
